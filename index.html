@@ -1,0 +1,2313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>코트마스터 — 농구 전술 작전판</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      background: #0b1120;
+      color: #f1f5f9;
+      margin: 0;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    canvas {
+      touch-action: none;
+      display: block;
+    }
+    .tool-btn {
+      transition: all 0.15s ease;
+    }
+    .tool-btn.active {
+      background: #f97316;
+      color: #ffffff;
+      border-color: #fb923c;
+      box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.25);
+    }
+    .step-chip {
+      transition: all 0.15s ease;
+    }
+    .step-chip.active {
+      background: #f97316;
+      color: #ffffff;
+      border-color: #fb923c;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 999px;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translate(-50%, 12px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .toast-anim {
+      animation: toastIn 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900/95 border-b border-slate-800 px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-30 backdrop-blur">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
+        <svg viewBox="0 0 24 24" class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9.5" />
+          <path d="M12 2.5v19M2.5 12h19" />
+          <path d="M5.5 5.5c3.5 3.5 3.5 9.5 0 13M18.5 5.5c-3.5 3.5-3.5 9.5 0 13" />
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-white truncate">코트마스터</h1>
+          <span class="hidden sm:inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30">전술 작전판</span>
+          <span id="creatorHeaderBadge" class="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-amber-500/40">제작 · 우연.33</span>
+        </div>
+        <p class="text-[11px] text-slate-400 truncate hidden md:block">드래그 · 전술 기호 드로잉 · 단계별 애니메이션</p>
+      </div>
+    </div>
+
+    <!-- Court Mode Switcher -->
+    <div class="flex items-center bg-slate-800/90 p-1 rounded-xl border border-slate-700/80">
+      <button id="btnHalfCourt" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-orange-500 text-white shadow-sm">
+        하프코트
+      </button>
+      <button id="btnFullCourt" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition text-slate-300 hover:text-white">
+        풀코트
+      </button>
+    </div>
+
+    <!-- Playbook & Export Actions -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <button id="btnOpenPlaybook" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition">
+        <i data-lucide="book-open" class="w-3.5 h-3.5 text-orange-400"></i>
+        <span>작전북</span>
+      </button>
+      <button id="btnOpenShare" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition" title="작전 링크 공유 또는 JSON 파일 내보내기·불러오기">
+        <i data-lucide="share-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+        <span class="hidden sm:inline">공유</span>
+      </button>
+      <button id="btnSavePlay" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-xs font-semibold text-white transition shadow-sm">
+        <i data-lucide="save" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">저장</span>
+      </button>
+      <button id="btnExportPng" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition" title="현재 화면을 PNG 이미지로 저장">
+        <i data-lucide="download" class="w-3.5 h-3.5 text-sky-400"></i>
+        <span class="hidden sm:inline">PNG</span>
+      </button>
+      <button id="btnExportVideo" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 border border-rose-500/70 text-xs font-semibold text-white transition shadow-sm" title="전체 작전 애니메이션을 동영상 파일로 저장">
+        <i data-lucide="video" class="w-3.5 h-3.5"></i>
+        <span id="exportVideoLabel" class="hidden sm:inline">영상 저장</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 flex flex-col lg:flex-row gap-3 p-3 sm:p-4 max-w-[1440px] w-full mx-auto min-h-0">
+
+    <!-- Left Toolbar: Drawing Tools & Display Options -->
+    <aside class="lg:w-56 shrink-0 flex flex-col gap-3">
+      <!-- Tools Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">전술 도구</span>
+          <span id="activeToolLabel" class="text-[11px] font-semibold text-orange-400">선수 이동</span>
+        </div>
+        <div class="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-2 gap-1.5">
+          <button data-tool="select" class="tool-btn active flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700">
+            <i data-lucide="move" class="w-4 h-4 shrink-0"></i>
+            <span class="text-[11px] lg:text-xs">이동</span>
+          </button>
+          <button data-tool="cut" class="tool-btn flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700">
+            <i data-lucide="arrow-up-right" class="w-4 h-4 shrink-0"></i>
+            <span class="text-[11px] lg:text-xs">컷/이동선</span>
+          </button>
+          <button data-tool="pass" class="tool-btn flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700">
+            <i data-lucide="git-commit-horizontal" class="w-4 h-4 shrink-0"></i>
+            <span class="text-[11px] lg:text-xs">패스</span>
+          </button>
+          <button data-tool="dribble" class="tool-btn flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700">
+            <i data-lucide="activity" class="w-4 h-4 shrink-0"></i>
+            <span class="text-[11px] lg:text-xs">드리블</span>
+          </button>
+          <button data-tool="screen" class="tool-btn flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700">
+            <i data-lucide="shield" class="w-4 h-4 shrink-0"></i>
+            <span class="text-[11px] lg:text-xs">스크린</span>
+          </button>
+          <button data-tool="pen" class="tool-btn flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700">
+            <i data-lucide="pen-tool" class="w-4 h-4 shrink-0"></i>
+            <span class="text-[11px] lg:text-xs">자유선</span>
+          </button>
+          <button data-tool="eraser" class="tool-btn flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700 lg:col-span-2">
+            <i data-lucide="eraser" class="w-4 h-4 shrink-0"></i>
+            <span class="text-[11px] lg:text-xs">선 지우개</span>
+          </button>
+        </div>
+
+        <!-- Line Color Palette -->
+        <div class="mt-3 pt-3 border-t border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-semibold text-slate-400">선 색상</span>
+            <div class="flex items-center gap-1.5" id="colorPalette">
+              <button data-color="#ffffff" class="color-dot w-5 h-5 rounded-full bg-white ring-2 ring-orange-400 ring-offset-2 ring-offset-slate-900" title="흰색"></button>
+              <button data-color="#fde047" class="color-dot w-5 h-5 rounded-full bg-yellow-300 opacity-80 hover:opacity-100" title="노랑"></button>
+              <button data-color="#38bdf8" class="color-dot w-5 h-5 rounded-full bg-sky-400 opacity-80 hover:opacity-100" title="하늘"></button>
+              <button data-color="#f87171" class="color-dot w-5 h-5 rounded-full bg-red-400 opacity-80 hover:opacity-100" title="빨강"></button>
+              <button data-color="#4ade80" class="color-dot w-5 h-5 rounded-full bg-green-400 opacity-80 hover:opacity-100" title="초록"></button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5 mt-2">
+            <button id="btnUndo" class="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 transition">
+              <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
+              <span>실행취소</span>
+            </button>
+            <button id="btnClearLines" class="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300 border border-slate-700 text-xs font-medium text-slate-200 transition">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>선 비우기</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Display & Formation Options -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2.5">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">표시 및 포메이션</span>
+
+        <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200">
+          <span>수비수(X1~X5) 표시</span>
+          <input id="toggleDefense" type="checkbox" checked class="w-4 h-4 accent-orange-500 rounded cursor-pointer" />
+        </label>
+
+        <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200">
+          <span>포지션명 표시 (PG~C)</span>
+          <input id="togglePosLabel" type="checkbox" checked class="w-4 h-4 accent-orange-500 rounded cursor-pointer" />
+        </label>
+
+        <button id="btnResetPositions" class="w-full mt-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 transition">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>기본 대형 초기화</span>
+        </button>
+      </div>
+
+      <!-- Quick Presets -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">추천 기본 전술</span>
+        <div class="grid grid-cols-2 lg:grid-cols-1 gap-1.5" id="presetButtons">
+          <button data-preset="pnr" class="text-left px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 transition">
+            <div class="text-xs font-semibold text-white">하이 픽앤롤</div>
+            <div class="text-[10px] text-slate-400">하프코트 · 3스텝</div>
+          </button>
+          <button data-preset="horns" class="text-left px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 transition">
+            <div class="text-xs font-semibold text-white">혼즈 세트 (Horns)</div>
+            <div class="text-[10px] text-slate-400">하프코트 · 3스텝</div>
+          </button>
+          <button data-preset="driveKick" class="text-left px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 transition">
+            <div class="text-xs font-semibold text-white">돌파 후 코너 킥아웃</div>
+            <div class="text-[10px] text-slate-400">하프코트 · 3스텝</div>
+          </button>
+          <button data-preset="fastBreak" class="text-left px-2.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 transition">
+            <div class="text-xs font-semibold text-white">3선 속공 트랜지션</div>
+            <div class="text-[10px] text-slate-400">풀코트 · 3스텝</div>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: Interactive Basketball Court + Animation Timeline -->
+    <section class="flex-1 flex flex-col gap-3 min-w-0">
+      <!-- Play Title Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2 flex-1 min-w-[180px]">
+          <i data-lucide="clipboard-list" class="w-4 h-4 text-orange-400 shrink-0"></i>
+          <input id="playTitleInput" type="text" value="하이 픽앤롤 (High Pick & Roll)" placeholder="작전 이름을 입력하세요" class="bg-transparent text-sm sm:text-base font-bold text-white focus:outline-none border-b border-transparent focus:border-orange-500 w-full py-0.5" />
+        </div>
+        <div class="flex items-center gap-2 text-[11px] text-slate-400">
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span>공격(1~5)</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span>수비(X1~X5)</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600 border border-amber-300 inline-block"></span>공</span>
+        </div>
+      </div>
+
+      <!-- Court Canvas Wrapper -->
+      <div id="courtWrapper" class="relative bg-slate-900 border border-slate-800 rounded-2xl p-2 sm:p-3 flex items-center justify-center shadow-2xl overflow-hidden">
+        <canvas id="courtCanvas" class="rounded-xl shadow-inner max-w-full cursor-grab"></canvas>
+        <!-- Playing Indicator Badge -->
+        <div id="playingBadge" class="hidden absolute top-5 right-5 px-3 py-1 rounded-full bg-orange-500/95 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 pointer-events-none">
+          <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+          <span>애니메이션 재생 중</span>
+        </div>
+        <!-- Recording Indicator Badge -->
+        <div id="recordingBadge" class="hidden absolute top-5 right-5 px-3 py-1 rounded-full bg-rose-600/95 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 pointer-events-none">
+          <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+          <span id="recordingBadgeText">동영상 녹화 중...</span>
+        </div>
+      </div>
+
+      <!-- Step-by-Step Animation Timeline & Notes -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-3.5 flex flex-col gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <!-- Playback Controls -->
+          <div class="flex items-center gap-1.5">
+            <button id="btnPlayPause" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition shadow-sm">
+              <i id="playIcon" data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span id="playText">재생</span>
+            </button>
+            <button id="btnPrevStep" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition" title="이전 스텝">
+              <i data-lucide="skip-back" class="w-4 h-4"></i>
+            </button>
+            <button id="btnNextStep" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition" title="다음 스텝">
+              <i data-lucide="skip-forward" class="w-4 h-4"></i>
+            </button>
+            <select id="speedSelect" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold rounded-lg px-2 py-1.5 focus:outline-none focus:border-orange-500">
+              <option value="0.6">0.6x 느리게</option>
+              <option value="1" selected>1.0x 보통</option>
+              <option value="1.5">1.5x 빠르게</option>
+            </select>
+            <button id="btnLoopToggle" class="p-1.5 rounded-lg bg-orange-500/20 border border-orange-500/50 text-orange-300 transition" title="반복 재생 켜짐">
+              <i data-lucide="repeat" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Step Actions -->
+          <div class="flex items-center gap-1.5">
+            <button id="btnAddStep" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>스텝 추가</span>
+            </button>
+            <button id="btnDeleteStep" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300 border border-slate-700 text-slate-300 text-xs font-semibold transition">
+              <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+              <span>삭제</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step Chips Row -->
+        <div id="stepsContainer" class="flex items-center gap-1.5 overflow-x-auto scrollbar-thin pb-1"></div>
+
+        <!-- Step Coach Memo -->
+        <div class="flex items-start gap-2 bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2">
+          <i data-lucide="message-square-text" class="w-4 h-4 text-slate-400 mt-0.5 shrink-0"></i>
+          <input id="stepNoteInput" type="text" placeholder="이 스텝의 작전 지시사항을 입력하세요 (예: 5번이 탑에서 스크린을 걸고 롤인)" class="bg-transparent text-xs sm:text-sm text-slate-200 placeholder-slate-500 w-full focus:outline-none" />
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Protected Creator Footer -->
+  <footer id="creatorFooter" class="border-t border-slate-800/80 bg-slate-900/90 px-4 py-2 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+    <span id="creatorFooterText" class="font-semibold text-slate-300">코트마스터 농구 전술 작전판 · 제작자 <strong class="text-amber-300">우연.33</strong></span>
+  </footer>
+
+  <!-- Playbook Modal -->
+  <div id="playbookModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[82vh]">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="book-open" class="w-5 h-5 text-orange-400"></i>
+          <h2 class="text-base font-bold text-white">내 작전북 (Playbook)</h2>
+        </div>
+        <button id="btnClosePlaybook" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="savedPlaysList" class="p-4 overflow-y-auto scrollbar-thin flex flex-col gap-2.5 flex-1"></div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+        <span>저장된 작전은 이 브라우저에 보관됩니다.</span>
+        <button id="btnClosePlaybookFooter" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Export Preview Modal -->
+  <div id="videoModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="video" class="w-5 h-5 text-rose-400"></i>
+          <h2 class="text-base font-bold text-white">작전 동영상 저장 완료</h2>
+          <span id="videoFormatBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">WEBM</span>
+        </div>
+        <button id="btnCloseVideoModal" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-4 bg-slate-950/70 flex items-center justify-center overflow-hidden">
+        <video id="videoPreview" controls autoplay loop playsinline class="max-h-[54vh] max-w-full rounded-xl border border-slate-800 shadow-lg bg-black"></video>
+      </div>
+      <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-900 flex flex-wrap items-center justify-between gap-2">
+        <span id="videoFileInfo" class="text-xs text-slate-400">미리보기 확인 후 파일을 저장할 수 있습니다.</span>
+        <div class="flex items-center gap-2">
+          <button id="btnCloseVideoModalFooter" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">닫기</button>
+          <a id="btnDownloadVideoLink" download="basketball_play.webm" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition shadow-sm cursor-pointer">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>동영상 다운로드</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share & JSON Import/Export Modal -->
+  <div id="shareModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="share-2" class="w-5 h-5 text-emerald-400"></i>
+          <h2 class="text-base font-bold text-white">코치들과 작전 공유</h2>
+        </div>
+        <button id="btnCloseShareModal" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-5 flex flex-col gap-4">
+        <!-- URL Share Section -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold text-white">1. 작전 공유 링크 복사 (URL)</span>
+            <span class="text-[11px] text-emerald-400 font-medium">로그인 불필요</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mb-2.5">웹 호스팅에 배포한 상태에서 아래 링크를 보내면 다른 코치가 클릭만으로 현재 작전을 바로 열 수 있습니다.</p>
+          <div class="flex items-center gap-2">
+            <input id="shareUrlInput" type="text" readonly class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none select-all" />
+            <button id="btnCopyShareUrl" class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span>링크 복사</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- JSON File Export / Import Section -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold text-white">2. 작전 파일(.json) 주고받기</span>
+            <span class="text-[11px] text-sky-400 font-medium">오프라인·카톡 전송 가능</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mb-3">현재 작전을 JSON 파일로 저장해 전달하거나, 다른 코치에게 받은 작전 파일을 불러올 수 있습니다.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnExportJson" class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white transition">
+              <i data-lucide="file-down" class="w-4 h-4 text-sky-400"></i>
+              <span>JSON 내보내기</span>
+            </button>
+            <button id="btnImportJson" class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-xs font-semibold text-white transition">
+              <i data-lucide="file-up" class="w-4 h-4"></i>
+              <span>JSON 불러오기</span>
+            </button>
+            <input id="jsonFileInput" type="file" accept=".json,application/json" class="hidden" />
+          </div>
+        </div>
+      </div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+        <span>제작 · 우연.33</span>
+        <button id="btnCloseShareModalFooter" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs sm:text-sm font-semibold shadow-2xl"></div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'courtmaster_plays_v1';
+      // Immutable creator signature ('우연.33')
+      const CREATOR_SIGN = Object.freeze({
+        name: String.fromCharCode(50864, 50672, 46, 51, 51)
+      });
+
+      const TOOL_LABELS = {
+        select: '선수 이동',
+        cut: '컷 / 이동선',
+        pass: '패스 (점선)',
+        dribble: '드리블 (물결)',
+        screen: '스크린 (T자)',
+        pen: '자유선',
+        eraser: '선 지우개'
+      };
+
+      const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
+
+      // Logical dimensions for each court mode
+      const DIMS = {
+        half: { w: 800, h: 660 },
+        full: { w: 1000, h: 560 }
+      };
+
+      // Default formations
+      function createDefaultPlayers(mode) {
+        if (mode === 'half') {
+          return {
+            offense: [
+              { id: 'O1', num: '1', pos: 'PG', x: 400, y: 495 },
+              { id: 'O2', num: '2', pos: 'SG', x: 165, y: 390 },
+              { id: 'O3', num: '3', pos: 'SF', x: 635, y: 390 },
+              { id: 'O4', num: '4', pos: 'PF', x: 110, y: 170 },
+              { id: 'O5', num: '5', pos: 'C',  x: 525, y: 270 }
+            ],
+            defense: [
+              { id: 'D1', num: 'X1', pos: 'PG', x: 400, y: 430 },
+              { id: 'D2', num: 'X2', pos: 'SG', x: 220, y: 345 },
+              { id: 'D3', num: 'X3', pos: 'SF', x: 580, y: 345 },
+              { id: 'D4', num: 'X4', pos: 'PF', x: 185, y: 180 },
+              { id: 'D5', num: 'X5', pos: 'C',  x: 475, y: 235 }
+            ],
+            ball: { x: 425, y: 485 }
+          };
+        } else {
+          return {
+            offense: [
+              { id: 'O1', num: '1', pos: 'PG', x: 210, y: 280 },
+              { id: 'O2', num: '2', pos: 'SG', x: 350, y: 110 },
+              { id: 'O3', num: '3', pos: 'SF', x: 350, y: 450 },
+              { id: 'O4', num: '4', pos: 'PF', x: 170, y: 180 },
+              { id: 'O5', num: '5', pos: 'C',  x: 150, y: 360 }
+            ],
+            defense: [
+              { id: 'D1', num: 'X1', pos: 'PG', x: 310, y: 280 },
+              { id: 'D2', num: 'X2', pos: 'SG', x: 440, y: 155 },
+              { id: 'D3', num: 'X3', pos: 'SF', x: 440, y: 405 },
+              { id: 'D4', num: 'X4', pos: 'PF', x: 540, y: 230 },
+              { id: 'D5', num: 'X5', pos: 'C',  x: 540, y: 330 }
+            ],
+            ball: { x: 235, y: 275 }
+          };
+        }
+      }
+
+      // Built-in presets
+      const PRESETS = {
+        pnr: {
+          title: '하이 픽앤롤 (High Pick & Roll)',
+          mode: 'half',
+          steps: [
+            {
+              note: '1번 가드가 탑에서 볼을 소유하고, 5번 센터가 하이 스크린을 세팅합니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 400, y: 500 },
+                { id: 'O2', num: '2', pos: 'SG', x: 115, y: 165 },
+                { id: 'O3', num: '3', pos: 'SF', x: 685, y: 165 },
+                { id: 'O4', num: '4', pos: 'PF', x: 175, y: 390 },
+                { id: 'O5', num: '5', pos: 'C',  x: 490, y: 340 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 400, y: 442 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 185, y: 175 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 615, y: 175 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 230, y: 345 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 465, y: 280 }
+              ],
+              ball: { x: 424, y: 492 },
+              lines: [
+                { type: 'screen', color: '#fde047', x1: 482, y1: 360, x2: 440, y2: 438 },
+                { type: 'dribble', color: '#ffffff', x1: 416, y1: 488, x2: 535, y2: 395 }
+              ]
+            },
+            {
+              note: '1번이 스크린을 타고 우측 엘보우로 드리블 돌파, 5번은 골밑으로 빠르게 롤인합니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 545, y: 390 },
+                { id: 'O2', num: '2', pos: 'SG', x: 105, y: 145 },
+                { id: 'O3', num: '3', pos: 'SF', x: 695, y: 145 },
+                { id: 'O4', num: '4', pos: 'PF', x: 225, y: 445 },
+                { id: 'O5', num: '5', pos: 'C',  x: 445, y: 425 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 485, y: 445 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 215, y: 185 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 600, y: 190 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 270, y: 385 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 505, y: 335 }
+              ],
+              ball: { x: 565, y: 378 },
+              lines: [
+                { type: 'cut', color: '#4ade80', x1: 440, y1: 400, x2: 408, y2: 205 },
+                { type: 'pass', color: '#38bdf8', x1: 530, y1: 372, x2: 425, y2: 205 }
+              ]
+            },
+            {
+              note: '1번이 수비 2명을 끌어낸 뒤 롤인하는 5번에게 포켓 패스! 골밑 레이업 마무리.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 525, y: 305 },
+                { id: 'O2', num: '2', pos: 'SG', x: 105, y: 145 },
+                { id: 'O3', num: '3', pos: 'SF', x: 695, y: 145 },
+                { id: 'O4', num: '4', pos: 'PF', x: 255, y: 460 },
+                { id: 'O5', num: '5', pos: 'C',  x: 405, y: 180 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 555, y: 350 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 265, y: 195 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 575, y: 195 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 305, y: 375 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 485, y: 265 }
+              ],
+              ball: { x: 405, y: 150 },
+              lines: []
+            }
+          ]
+        },
+        horns: {
+          title: '혼즈 세트 (Horns Set)',
+          mode: 'half',
+          steps: [
+            {
+              note: '4번과 5번이 양쪽 엘보우에 서고, 2·3번은 양 코너로 넓게 벌립니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 400, y: 505 },
+                { id: 'O2', num: '2', pos: 'SG', x: 100, y: 140 },
+                { id: 'O3', num: '3', pos: 'SF', x: 700, y: 140 },
+                { id: 'O4', num: '4', pos: 'PF', x: 305, y: 335 },
+                { id: 'O5', num: '5', pos: 'C',  x: 495, y: 335 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 400, y: 445 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 170, y: 165 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 630, y: 165 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 325, y: 280 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 475, y: 280 }
+              ],
+              ball: { x: 424, y: 495 },
+              lines: [
+                { type: 'screen', color: '#fde047', x1: 315, y1: 355, x2: 360, y2: 430 },
+                { type: 'dribble', color: '#ffffff', x1: 385, y1: 492, x2: 260, y2: 375 },
+                { type: 'cut', color: '#4ade80', x1: 505, y1: 350, x2: 585, y2: 440 }
+              ]
+            },
+            {
+              note: '1번이 4번 스크린을 타고 좌측 돌파, 5번은 탑 우측 3점 라인 밖으로 팝아웃합니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 255, y: 370 },
+                { id: 'O2', num: '2', pos: 'SG', x: 100, y: 140 },
+                { id: 'O3', num: '3', pos: 'SF', x: 700, y: 140 },
+                { id: 'O4', num: '4', pos: 'PF', x: 355, y: 420 },
+                { id: 'O5', num: '5', pos: 'C',  x: 585, y: 445 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 315, y: 410 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 170, y: 175 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 615, y: 185 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 285, y: 310 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 505, y: 370 }
+              ],
+              ball: { x: 235, y: 358 },
+              lines: [
+                { type: 'cut', color: '#4ade80', x1: 360, y1: 395, x2: 395, y2: 200 },
+                { type: 'pass', color: '#38bdf8', x1: 280, y1: 378, x2: 560, y2: 442 }
+              ]
+            },
+            {
+              note: '5번이 오픈 3점 슛을 노리거나, 골밑으로 들어간 4번에게 하이-로우 패스 연결!',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 245, y: 345 },
+                { id: 'O2', num: '2', pos: 'SG', x: 100, y: 140 },
+                { id: 'O3', num: '3', pos: 'SF', x: 700, y: 140 },
+                { id: 'O4', num: '4', pos: 'PF', x: 395, y: 195 },
+                { id: 'O5', num: '5', pos: 'C',  x: 585, y: 445 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 285, y: 325 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 195, y: 180 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 615, y: 190 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 375, y: 245 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 540, y: 395 }
+              ],
+              ball: { x: 585, y: 418 },
+              lines: [
+                { type: 'pass', color: '#38bdf8', x1: 565, y1: 422, x2: 415, y2: 215 }
+              ]
+            }
+          ]
+        },
+        driveKick: {
+          title: '돌파 후 코너 킥아웃 (Drive & Kick)',
+          mode: 'half',
+          steps: [
+            {
+              note: '5-Out 스페이싱 대형에서 2번이 우측 윙에서 아이솔레이션 돌파를 시작합니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 400, y: 500 },
+                { id: 'O2', num: '2', pos: 'SG', x: 635, y: 365 },
+                { id: 'O3', num: '3', pos: 'SF', x: 100, y: 150 },
+                { id: 'O4', num: '4', pos: 'PF', x: 165, y: 370 },
+                { id: 'O5', num: '5', pos: 'C',  x: 700, y: 150 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 400, y: 435 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 575, y: 335 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 210, y: 185 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 245, y: 325 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 610, y: 185 }
+              ],
+              ball: { x: 648, y: 345 },
+              lines: [
+                { type: 'dribble', color: '#ffffff', x1: 615, y1: 350, x2: 465, y2: 230 }
+              ]
+            },
+            {
+              note: '2번이 페인트존으로 침투하자 코너 수비수(X5)가 헬프 수비로 좁혀듭니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 375, y: 495 },
+                { id: 'O2', num: '2', pos: 'SG', x: 465, y: 230 },
+                { id: 'O3', num: '3', pos: 'SF', x: 100, y: 150 },
+                { id: 'O4', num: '4', pos: 'PF', x: 165, y: 370 },
+                { id: 'O5', num: '5', pos: 'C',  x: 705, y: 140 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 390, y: 410 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 510, y: 265 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 270, y: 190 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 275, y: 315 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 490, y: 185 }
+              ],
+              ball: { x: 452, y: 212 },
+              lines: [
+                { type: 'pass', color: '#38bdf8', x1: 485, y1: 222, x2: 682, y2: 148 }
+              ]
+            },
+            {
+              note: '헬프 수비를 읽고 우측 코너 오픈 찬스인 5번에게 킥아웃 패스 → 캐치 앤 슛!',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 375, y: 495 },
+                { id: 'O2', num: '2', pos: 'SG', x: 455, y: 215 },
+                { id: 'O3', num: '3', pos: 'SF', x: 100, y: 150 },
+                { id: 'O4', num: '4', pos: 'PF', x: 165, y: 370 },
+                { id: 'O5', num: '5', pos: 'C',  x: 705, y: 140 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 390, y: 410 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 495, y: 255 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 270, y: 190 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 280, y: 315 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 590, y: 165 }
+              ],
+              ball: { x: 690, y: 120 },
+              lines: []
+            }
+          ]
+        },
+        fastBreak: {
+          title: '3선 속공 트랜지션 (Fast Break)',
+          mode: 'full',
+          steps: [
+            {
+              note: '5번이 수비 리바운드 확보 후 1번 가드에게 아웃렛 패스를 연결합니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 250, y: 280 },
+                { id: 'O2', num: '2', pos: 'SG', x: 320, y: 95 },
+                { id: 'O3', num: '3', pos: 'SF', x: 320, y: 465 },
+                { id: 'O4', num: '4', pos: 'PF', x: 200, y: 185 },
+                { id: 'O5', num: '5', pos: 'C',  x: 135, y: 295 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 360, y: 280 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 460, y: 165 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 460, y: 395 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 260, y: 215 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 240, y: 355 }
+              ],
+              ball: { x: 155, y: 290 },
+              lines: [
+                { type: 'pass', color: '#38bdf8', x1: 155, y1: 290, x2: 235, y2: 282 },
+                { type: 'cut', color: '#4ade80', x1: 340, y1: 95, x2: 740, y2: 85 },
+                { type: 'cut', color: '#4ade80', x1: 340, y1: 465, x2: 740, y2: 475 }
+              ]
+            },
+            {
+              note: '1번이 중앙 레인으로 고속 드리블, 2·3번 윙이 양 사이드 레인을 전력 질주합니다.',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 560, y: 280 },
+                { id: 'O2', num: '2', pos: 'SG', x: 745, y: 85 },
+                { id: 'O3', num: '3', pos: 'SF', x: 745, y: 475 },
+                { id: 'O4', num: '4', pos: 'PF', x: 495, y: 205 },
+                { id: 'O5', num: '5', pos: 'C',  x: 410, y: 315 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 675, y: 280 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 750, y: 215 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 750, y: 345 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 580, y: 230 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 540, y: 345 }
+              ],
+              ball: { x: 582, y: 274 },
+              lines: [
+                { type: 'dribble', color: '#ffffff', x1: 580, y1: 280, x2: 735, y2: 280 },
+                { type: 'pass', color: '#38bdf8', x1: 735, y1: 265, x2: 840, y2: 145 }
+              ]
+            },
+            {
+              note: '수비수를 중앙으로 모은 뒤 우측 윙 2번에게 패스하여 레이업 마무리!',
+              offense: [
+                { id: 'O1', num: '1', pos: 'PG', x: 735, y: 280 },
+                { id: 'O2', num: '2', pos: 'SG', x: 855, y: 155 },
+                { id: 'O3', num: '3', pos: 'SF', x: 845, y: 420 },
+                { id: 'O4', num: '4', pos: 'PF', x: 710, y: 195 },
+                { id: 'O5', num: '5', pos: 'C',  x: 685, y: 340 }
+              ],
+              defense: [
+                { id: 'D1', num: 'X1', pos: 'PG', x: 785, y: 275 },
+                { id: 'D2', num: 'X2', pos: 'SG', x: 815, y: 225 },
+                { id: 'D3', num: 'X3', pos: 'SF', x: 815, y: 335 },
+                { id: 'D4', num: 'X4', pos: 'PF', x: 735, y: 225 },
+                { id: 'D5', num: 'X5', pos: 'C',  x: 735, y: 330 }
+              ],
+              ball: { x: 878, y: 165 },
+              lines: []
+            }
+          ]
+        }
+      };
+
+      // Deep clone helper
+      function clone(obj) {
+        return JSON.parse(JSON.stringify(obj));
+      }
+
+      // Application State
+      const state = {
+        mode: 'half',
+        tool: 'select',
+        color: '#ffffff',
+        showDefense: true,
+        showPosLabel: true,
+        steps: [],
+        currentStep: 0,
+        // Interaction state
+        draggingTarget: null, // { group: 'offense'|'defense'|'ball', index: number, dx: number, dy: number }
+        drawingLine: null,
+        // Animation state
+        isPlaying: false,
+        loop: true,
+        speed: 1,
+        animFrameId: null,
+        animStartTime: 0,
+        animFromStep: 0,
+        animProgress: 0,
+        // Video recording state
+        isRecording: false,
+        mediaRecorder: null,
+        recordedChunks: [],
+        recordedUrl: null
+      };
+
+      // DOM elements
+      const canvas = document.getElementById('courtCanvas');
+      const ctx = canvas.getContext('2d');
+      const courtWrapper = document.getElementById('courtWrapper');
+      const playTitleInput = document.getElementById('playTitleInput');
+      const stepNoteInput = document.getElementById('stepNoteInput');
+      const stepsContainer = document.getElementById('stepsContainer');
+      const activeToolLabel = document.getElementById('activeToolLabel');
+      const playingBadge = document.getElementById('playingBadge');
+      const recordingBadge = document.getElementById('recordingBadge');
+      const recordingBadgeText = document.getElementById('recordingBadgeText');
+      const btnExportVideo = document.getElementById('btnExportVideo');
+      const exportVideoLabel = document.getElementById('exportVideoLabel');
+      const videoModal = document.getElementById('videoModal');
+      const videoPreview = document.getElementById('videoPreview');
+      const videoFormatBadge = document.getElementById('videoFormatBadge');
+      const videoFileInfo = document.getElementById('videoFileInfo');
+      const btnDownloadVideoLink = document.getElementById('btnDownloadVideoLink');
+      const btnHalfCourt = document.getElementById('btnHalfCourt');
+      const btnFullCourt = document.getElementById('btnFullCourt');
+      const btnPlayPause = document.getElementById('btnPlayPause');
+      const playText = document.getElementById('playText');
+      const btnLoopToggle = document.getElementById('btnLoopToggle');
+      const speedSelect = document.getElementById('speedSelect');
+      const toggleDefense = document.getElementById('toggleDefense');
+      const togglePosLabel = document.getElementById('togglePosLabel');
+      const playbookModal = document.getElementById('playbookModal');
+      const savedPlaysList = document.getElementById('savedPlaysList');
+      const toastEl = document.getElementById('toast');
+
+      let toastTimer = null;
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.remove('hidden', 'toast-anim');
+        void toastEl.offsetWidth;
+        toastEl.classList.add('toast-anim');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.add('hidden'), 2400);
+      }
+
+      // Canvas sizing with crisp DPR
+      function resizeCanvas() {
+        const dim = DIMS[state.mode];
+        const wrapperWidth = Math.max(280, courtWrapper.clientWidth - 24);
+        const maxH = Math.min(window.innerHeight * 0.62, 620);
+        const aspect = dim.w / dim.h;
+
+        let displayW = wrapperWidth;
+        let displayH = displayW / aspect;
+        if (displayH > maxH) {
+          displayH = maxH;
+          displayW = displayH * aspect;
+        }
+
+        const dpr = window.devicePixelRatio || 1;
+        canvas.style.width = Math.floor(displayW) + 'px';
+        canvas.style.height = Math.floor(displayH) + 'px';
+        canvas.width = Math.floor(dim.w * dpr);
+        canvas.height = Math.floor(dim.h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        render();
+      }
+
+      // Convert pointer event to logical court coords
+      function getCourtPoint(e) {
+        const rect = canvas.getBoundingClientRect();
+        const dim = DIMS[state.mode];
+        const x = ((e.clientX - rect.left) / rect.width) * dim.w;
+        const y = ((e.clientY - rect.top) / rect.height) * dim.h;
+        return {
+          x: Math.max(16, Math.min(dim.w - 16, x)),
+          y: Math.max(16, Math.min(dim.h - 16, y))
+        };
+      }
+
+      // Court Drawing
+      function drawCourt() {
+        const dim = DIMS[state.mode];
+        const W = dim.w;
+        const H = dim.h;
+
+        // Warm hardwood base
+        ctx.fillStyle = '#cf9351';
+        ctx.fillRect(0, 0, W, H);
+
+        // Subtle maple plank stripes
+        const plankCount = state.mode === 'half' ? 18 : 22;
+        const plankW = W / plankCount;
+        for (let i = 0; i < plankCount; i++) {
+          ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.045)' : 'rgba(92,48,12,0.045)';
+          ctx.fillRect(i * plankW, 0, plankW, H);
+        }
+
+        // Outer apron border
+        const pad = 28;
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, W, pad);
+        ctx.fillRect(0, H - pad, W, pad);
+        ctx.fillRect(0, 0, pad, H);
+        ctx.fillRect(W - pad, 0, pad, H);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (state.mode === 'half') {
+          const cw = W - pad * 2;
+          const ch = H - pad * 2;
+          const cx = W / 2;
+          const topY = pad;
+          const botY = H - pad;
+
+          // Painted Key (Navy blue)
+          const keyW = 200;
+          const keyH = 235;
+          ctx.fillStyle = 'rgba(30, 58, 138, 0.72)';
+          ctx.fillRect(cx - keyW / 2, topY, keyW, keyH);
+
+          // Court boundary
+          ctx.strokeRect(pad, topY, cw, ch);
+
+          // Key outline
+          ctx.strokeRect(cx - keyW / 2, topY, keyW, keyH);
+
+          // Free throw circle
+          const ftR = 74;
+          ctx.beginPath();
+          ctx.arc(cx, topY + keyH, ftR, 0, Math.PI);
+          ctx.stroke();
+          ctx.save();
+          ctx.setLineDash([8, 8]);
+          ctx.beginPath();
+          ctx.arc(cx, topY + keyH, ftR, Math.PI, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          // Key hash marks
+          const hashes = [72, 112, 152, 192];
+          hashes.forEach(hy => {
+            ctx.beginPath();
+            ctx.moveTo(cx - keyW / 2 - 10, topY + hy);
+            ctx.lineTo(cx - keyW / 2, topY + hy);
+            ctx.moveTo(cx + keyW / 2, topY + hy);
+            ctx.lineTo(cx + keyW / 2 + 10, topY + hy);
+            ctx.stroke();
+          });
+
+          // 3-point line
+          const rimY = topY + 56;
+          const threeR = 305;
+          const cornerX = 68;
+          const dx = (cx - (pad + cornerX));
+          const dy = Math.sqrt(Math.max(0, threeR * threeR - dx * dx));
+          const cornerEndY = rimY + dy;
+
+          ctx.beginPath();
+          ctx.moveTo(pad + cornerX, topY);
+          ctx.lineTo(pad + cornerX, cornerEndY);
+          ctx.arc(cx, rimY, threeR, Math.PI - Math.asin(dy / threeR), Math.asin(dy / threeR), true);
+          ctx.lineTo(W - pad - cornerX, topY);
+          ctx.stroke();
+
+          // Restricted area arc
+          ctx.beginPath();
+          ctx.arc(cx, rimY, 52, 0, Math.PI);
+          ctx.stroke();
+
+          // Backboard & Rim
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(cx - 38, topY + 38);
+          ctx.lineTo(cx + 38, topY + 38);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#f97316';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(cx, rimY, 13, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Half-court center circle (bottom)
+          ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(cx, botY, 72, Math.PI, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          // FULL COURT (horizontal)
+          const cw = W - pad * 2;
+          const ch = H - pad * 2;
+          const cy = H / 2;
+          const leftX = pad;
+          const rightX = W - pad;
+
+          // Center circle
+          ctx.fillStyle = 'rgba(30, 58, 138, 0.35)';
+          ctx.beginPath();
+          ctx.arc(W / 2, cy, 62, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Painted Keys
+          const keyW = 175;
+          const keyH = 152;
+          ctx.fillStyle = 'rgba(30, 58, 138, 0.72)';
+          ctx.fillRect(leftX, cy - keyH / 2, keyW, keyH);
+          ctx.fillRect(rightX - keyW, cy - keyH / 2, keyW, keyH);
+
+          // Outer boundary
+          ctx.strokeRect(leftX, pad, cw, ch);
+
+          // Half-court line & center circle
+          ctx.beginPath();
+          ctx.moveTo(W / 2, pad);
+          ctx.lineTo(W / 2, H - pad);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(W / 2, cy, 62, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Left & Right Keys + FT circles + 3pt lines + Rims
+          const drawEnd = (side) => {
+            const isLeft = side === 'left';
+            const baseX = isLeft ? leftX : rightX;
+            const dir = isLeft ? 1 : -1;
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(isLeft ? leftX : rightX - keyW, cy - keyH / 2, keyW, keyH);
+
+            // FT circle
+            const ftX = baseX + dir * keyW;
+            ctx.beginPath();
+            ctx.arc(ftX, cy, 55, isLeft ? -Math.PI / 2 : Math.PI / 2, isLeft ? Math.PI / 2 : Math.PI * 1.5);
+            ctx.stroke();
+
+            // 3pt arc
+            const rimX = baseX + dir * 46;
+            const threeR = 215;
+            const cornerY = 38;
+            const dy = (H / 2) - (pad + cornerY);
+            const dx = Math.sqrt(Math.max(0, threeR * threeR - dy * dy));
+            const angle = Math.asin(dy / threeR);
+
+            ctx.beginPath();
+            ctx.moveTo(baseX, pad + cornerY);
+            ctx.lineTo(rimX + dir * dx, pad + cornerY);
+            if (isLeft) {
+              ctx.arc(rimX, cy, threeR, -angle, angle, false);
+            } else {
+              ctx.arc(rimX, cy, threeR, Math.PI + angle, Math.PI - angle, true);
+            }
+            ctx.lineTo(baseX, H - pad - cornerY);
+            ctx.stroke();
+
+            // Backboard & Rim
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(baseX + dir * 32, cy - 28);
+            ctx.lineTo(baseX + dir * 32, cy + 28);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(rimX, cy, 10, 0, Math.PI * 2);
+            ctx.stroke();
+          };
+          drawEnd('left');
+          drawEnd('right');
+        }
+      }
+
+      // Draw tactical lines (Cut, Pass, Dribble, Screen, Pen)
+      function drawArrowHead(x, y, angle, size, color) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - size * Math.cos(angle - Math.PI / 6), y - size * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(x - size * Math.cos(angle + Math.PI / 6), y - size * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawTacticalLine(line) {
+        ctx.save();
+        ctx.strokeStyle = line.color || '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (line.type === 'pen' && line.points && line.points.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(line.points[0].x, line.points[0].y);
+          for (let i = 1; i < line.points.length; i++) {
+            ctx.lineTo(line.points[i].x, line.points[i].y);
+          }
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+
+        const { x1, y1, x2, y2 } = line;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 4) {
+          ctx.restore();
+          return;
+        }
+        const angle = Math.atan2(dy, dx);
+
+        if (line.type === 'cut') {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2 - Math.cos(angle) * 10, y2 - Math.sin(angle) * 10);
+          ctx.stroke();
+          drawArrowHead(x2, y2, angle, 15, line.color || '#ffffff');
+        } else if (line.type === 'pass') {
+          ctx.setLineDash([10, 8]);
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2 - Math.cos(angle) * 10, y2 - Math.sin(angle) * 10);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          drawArrowHead(x2, y2, angle, 15, line.color || '#ffffff');
+        } else if (line.type === 'dribble') {
+          const waveLen = 14;
+          const amp = 6;
+          const steps = Math.max(4, Math.floor((dist - 12) / 3));
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const t = (i / steps) * (dist - 12);
+            const perp = Math.sin((t / waveLen) * Math.PI * 2) * amp;
+            const px = x1 + Math.cos(angle) * t - Math.sin(angle) * perp;
+            const py = y1 + Math.sin(angle) * t + Math.cos(angle) * perp;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          drawArrowHead(x2, y2, angle, 15, line.color || '#ffffff');
+        } else if (line.type === 'screen') {
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          // Perpendicular T-bar
+          const barHalf = 16;
+          const px = -Math.sin(angle) * barHalf;
+          const py = Math.cos(angle) * barHalf;
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.moveTo(x2 - px, y2 - py);
+          ctx.lineTo(x2 + px, y2 + py);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Draw Players & Ball
+      function drawPlayerToken(p, isOffense) {
+        const r = state.mode === 'half' ? 21 : 18;
+        ctx.save();
+
+        // Shadow
+        ctx.beginPath();
+        ctx.arc(p.x, p.y + 3, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.32)';
+        ctx.fill();
+
+        // Token fill
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = isOffense ? '#ea580c' : '#0284c7';
+        ctx.fill();
+
+        // Border ring
+        ctx.lineWidth = 2.8;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        // Number
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `800 ${state.mode === 'half' ? 15 : 13}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.num, p.x, p.y + (state.showPosLabel ? -2 : 0.5));
+
+        // Optional Position sub-label
+        if (state.showPosLabel) {
+          ctx.font = `700 ${state.mode === 'half' ? 9 : 8}px Inter, sans-serif`;
+          ctx.fillStyle = 'rgba(255,255,255,0.88)';
+          ctx.fillText(p.pos, p.x, p.y + (state.mode === 'half' ? 11 : 9));
+        }
+
+        ctx.restore();
+      }
+
+      function drawBasketball(ball) {
+        const r = state.mode === 'half' ? 13 : 11;
+        ctx.save();
+        // Shadow
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y + 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+
+        // Ball body
+        const grad = ctx.createRadialGradient(ball.x - 3, ball.y - 3, 2, ball.x, ball.y, r);
+        grad.addColorStop(0, '#fb923c');
+        grad.addColorStop(1, '#c2410c');
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = '#431407';
+        ctx.stroke();
+
+        // Seams
+        ctx.beginPath();
+        ctx.moveTo(ball.x - r, ball.y);
+        ctx.lineTo(ball.x + r, ball.y);
+        ctx.moveTo(ball.x, ball.y - r);
+        ctx.lineTo(ball.x, ball.y + r);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Easing for smooth animation
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function getInterpolatedFrame() {
+        const cur = state.steps[state.currentStep];
+        if (!state.isPlaying || state.steps.length < 2) {
+          return cur;
+        }
+        const from = state.steps[state.animFromStep];
+        const nextIdx = (state.animFromStep + 1) % state.steps.length;
+        const to = state.steps[nextIdx];
+        const t = easeInOutCubic(state.animProgress);
+
+        const lerpList = (a, b) => a.map((p, i) => ({
+          ...p,
+          x: p.x + ((b[i] ? b[i].x : p.x) - p.x) * t,
+          y: p.y + ((b[i] ? b[i].y : p.y) - p.y) * t
+        }));
+
+        return {
+          offense: lerpList(from.offense, to.offense),
+          defense: lerpList(from.defense, to.defense),
+          ball: {
+            x: from.ball.x + (to.ball.x - from.ball.x) * t,
+            y: from.ball.y + (to.ball.y - from.ball.y) * t
+          },
+          lines: from.lines
+        };
+      }
+
+      function render() {
+        const frame = getInterpolatedFrame();
+        if (!frame) return;
+
+        drawCourt();
+
+        // Draw saved lines of current frame
+        if (frame.lines) {
+          frame.lines.forEach(drawTacticalLine);
+        }
+
+        // Draw active line being dragged
+        if (state.drawingLine) {
+          drawTacticalLine(state.drawingLine);
+        }
+
+        // Draw defense
+        if (state.showDefense) {
+          frame.defense.forEach(p => drawPlayerToken(p, false));
+        }
+
+        // Draw offense
+        frame.offense.forEach(p => drawPlayerToken(p, true));
+
+        // Draw ball
+        drawBasketball(frame.ball);
+
+        // Permanent creator watermark on court apron (included in live view, PNG & video)
+        (function drawCreatorWatermark() {
+          const dim = DIMS[state.mode];
+          ctx.save();
+          ctx.font = '700 11px Inter, sans-serif';
+          ctx.fillStyle = 'rgba(251, 191, 36, 0.85)';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`제작 · ${CREATOR_SIGN.name}`, dim.w - 14, dim.h - 14);
+          ctx.restore();
+        })();
+
+        // Burn play title & step memo into video frames while recording
+        if (state.isRecording) {
+          const dim = DIMS[state.mode];
+          const title = (playTitleInput.value || '농구 전술').trim();
+          const stepIdx = state.currentStep;
+          const note = (state.steps[stepIdx]?.note || '').trim();
+
+          ctx.save();
+          // Top apron title + step badge
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.fillRect(0, 0, dim.w, 28);
+          ctx.fillStyle = '#f8fafc';
+          ctx.font = '700 13px Inter, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`코트마스터 (${CREATOR_SIGN.name})  |  ${title}`, 14, 14);
+
+          ctx.fillStyle = '#fb923c';
+          ctx.textAlign = 'right';
+          ctx.fillText(`Step ${stepIdx + 1} / ${state.steps.length}`, dim.w - 14, 14);
+
+          // Bottom apron memo caption
+          if (note) {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.fillRect(0, dim.h - 28, dim.w, 28);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '600 12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(note.slice(0, 68), dim.w / 2, dim.h - 14);
+          }
+          ctx.restore();
+        }
+      }
+
+      // Hit testing for dragging
+      function findHitToken(pt) {
+        const step = state.steps[state.currentStep];
+        // Ball first
+        if (Math.hypot(pt.x - step.ball.x, pt.y - step.ball.y) <= 18) {
+          return { group: 'ball', index: 0, dx: pt.x - step.ball.x, dy: pt.y - step.ball.y };
+        }
+        // Offense
+        const r = state.mode === 'half' ? 24 : 21;
+        for (let i = step.offense.length - 1; i >= 0; i--) {
+          const p = step.offense[i];
+          if (Math.hypot(pt.x - p.x, pt.y - p.y) <= r) {
+            return { group: 'offense', index: i, dx: pt.x - p.x, dy: pt.y - p.y };
+          }
+        }
+        // Defense
+        if (state.showDefense) {
+          for (let i = step.defense.length - 1; i >= 0; i--) {
+            const p = step.defense[i];
+            if (Math.hypot(pt.x - p.x, pt.y - p.y) <= r) {
+              return { group: 'defense', index: i, dx: pt.x - p.x, dy: pt.y - p.y };
+            }
+          }
+        }
+        return null;
+      }
+
+      // Distance from point to segment for eraser
+      function distToSegment(px, py, x1, y1, x2, y2) {
+        const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+        if (l2 === 0) return Math.hypot(px - x1, py - y1);
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+      }
+
+      function eraseNear(pt) {
+        const step = state.steps[state.currentStep];
+        const before = step.lines.length;
+        step.lines = step.lines.filter(line => {
+          if (line.type === 'pen' && line.points) {
+            for (let i = 1; i < line.points.length; i++) {
+              if (distToSegment(pt.x, pt.y, line.points[i - 1].x, line.points[i - 1].y, line.points[i].x, line.points[i].y) < 16) {
+                return false;
+              }
+            }
+            return true;
+          }
+          return distToSegment(pt.x, pt.y, line.x1, line.y1, line.x2, line.y2) >= 16;
+        });
+        if (step.lines.length !== before) {
+          render();
+        }
+      }
+
+      // Pointer Events
+      canvas.addEventListener('pointerdown', (e) => {
+        if (state.isPlaying) stopAnimation();
+        canvas.setPointerCapture(e.pointerId);
+        const pt = getCourtPoint(e);
+
+        if (state.tool === 'select') {
+          const hit = findHitToken(pt);
+          if (hit) {
+            state.draggingTarget = hit;
+            canvas.style.cursor = 'grabbing';
+          }
+        } else if (state.tool === 'eraser') {
+          eraseNear(pt);
+        } else if (state.tool === 'pen') {
+          state.drawingLine = { type: 'pen', color: state.color, points: [pt] };
+        } else {
+          state.drawingLine = { type: state.tool, color: state.color, x1: pt.x, y1: pt.y, x2: pt.x, y2: pt.y };
+        }
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        const pt = getCourtPoint(e);
+        if (state.draggingTarget) {
+          const step = state.steps[state.currentStep];
+          const nx = Math.max(24, Math.min(DIMS[state.mode].w - 24, pt.x - state.draggingTarget.dx));
+          const ny = Math.max(24, Math.min(DIMS[state.mode].h - 24, pt.y - state.draggingTarget.dy));
+          if (state.draggingTarget.group === 'ball') {
+            step.ball.x = nx;
+            step.ball.y = ny;
+          } else {
+            step[state.draggingTarget.group][state.draggingTarget.index].x = nx;
+            step[state.draggingTarget.group][state.draggingTarget.index].y = ny;
+          }
+          render();
+        } else if (state.drawingLine) {
+          if (state.drawingLine.type === 'pen') {
+            state.drawingLine.points.push(pt);
+          } else {
+            state.drawingLine.x2 = pt.x;
+            state.drawingLine.y2 = pt.y;
+          }
+          render();
+        } else if (state.tool === 'eraser' && e.buttons === 1) {
+          eraseNear(pt);
+        }
+      });
+
+      function finishPointer() {
+        if (state.draggingTarget) {
+          state.draggingTarget = null;
+          canvas.style.cursor = state.tool === 'select' ? 'grab' : 'crosshair';
+        }
+        if (state.drawingLine) {
+          const dl = state.drawingLine;
+          const valid = dl.type === 'pen'
+            ? dl.points.length > 2
+            : Math.hypot(dl.x2 - dl.x1, dl.y2 - dl.y1) > 12;
+          if (valid) {
+            state.steps[state.currentStep].lines.push(dl);
+          }
+          state.drawingLine = null;
+          render();
+        }
+      }
+      canvas.addEventListener('pointerup', finishPointer);
+      canvas.addEventListener('pointercancel', finishPointer);
+
+      // Animation Loop
+      function startAnimation() {
+        if (state.steps.length < 2) {
+          showToast('애니메이션을 재생하려면 스텝이 2개 이상 필요합니다.');
+          return;
+        }
+        stopAnimation();
+        state.isPlaying = true;
+        state.animFromStep = state.currentStep >= state.steps.length - 1 ? 0 : state.currentStep;
+        state.currentStep = state.animFromStep;
+        state.animProgress = 0;
+        state.animStartTime = performance.now();
+        updatePlaybackUI();
+        renderStepsUI();
+
+        const stepDurationMs = () => 1450 / state.speed;
+
+        function tick(now) {
+          if (!state.isPlaying) return;
+          const elapsed = now - state.animStartTime;
+          const dur = stepDurationMs();
+          state.animProgress = Math.min(1, elapsed / dur);
+
+          if (state.animProgress >= 1) {
+            const nextStep = state.animFromStep + 1;
+            if (nextStep >= state.steps.length - 1) {
+              state.currentStep = state.steps.length - 1;
+              renderStepsUI();
+              if (state.loop) {
+                state.animFromStep = 0;
+                state.currentStep = 0;
+                state.animProgress = 0;
+                state.animStartTime = now + 450; // brief pause at end
+              } else {
+                stopAnimation();
+                render();
+                return;
+              }
+            } else {
+              state.animFromStep = nextStep;
+              state.currentStep = nextStep;
+              state.animProgress = 0;
+              state.animStartTime = now;
+              renderStepsUI();
+            }
+          }
+
+          if (now >= state.animStartTime) {
+            render();
+          }
+          state.animFrameId = requestAnimationFrame(tick);
+        }
+
+        state.animFrameId = requestAnimationFrame(tick);
+      }
+
+      function stopAnimation() {
+        if (state.animFrameId) {
+          cancelAnimationFrame(state.animFrameId);
+          state.animFrameId = null;
+        }
+        state.isPlaying = false;
+        state.animProgress = 0;
+        updatePlaybackUI();
+      }
+
+      function updatePlaybackUI() {
+        playText.textContent = state.isPlaying ? '정지' : '재생';
+        playingBadge.classList.toggle('hidden', !state.isPlaying);
+        btnPlayPause.className = state.isPlaying
+          ? 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-sm'
+          : 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition shadow-sm';
+        const icon = btnPlayPause.querySelector('svg, i');
+        if (icon) {
+          icon.outerHTML = `<i id="playIcon" data-lucide="${state.isPlaying ? 'square' : 'play'}" class="w-3.5 h-3.5"></i>`;
+          if (window.lucide) lucide.createIcons();
+        }
+      }
+
+      // Render Steps Chips
+      function renderStepsUI() {
+        stepsContainer.innerHTML = '';
+        state.steps.forEach((step, idx) => {
+          const btn = document.createElement('button');
+          btn.className = `step-chip shrink-0 px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
+            idx === state.currentStep
+              ? 'active border-orange-400'
+              : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
+          }`;
+          btn.innerHTML = `<span>Step ${idx + 1}</span>` + (step.lines.length > 0 ? `<span class="w-1.5 h-1.5 rounded-full ${idx === state.currentStep ? 'bg-white' : 'bg-orange-400'}"></span>` : '');
+          btn.addEventListener('click', () => {
+            if (state.isPlaying) stopAnimation();
+            state.currentStep = idx;
+            renderStepsUI();
+            render();
+          });
+          stepsContainer.appendChild(btn);
+        });
+        stepNoteInput.value = state.steps[state.currentStep]?.note || '';
+      }
+
+      // Switch Court Mode
+      function setCourtMode(mode, resetData = true) {
+        if (state.isPlaying) stopAnimation();
+        state.mode = mode;
+        btnHalfCourt.className = mode === 'half'
+          ? 'px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-orange-500 text-white shadow-sm'
+          : 'px-3 py-1.5 text-xs font-semibold rounded-lg transition text-slate-300 hover:text-white';
+        btnFullCourt.className = mode === 'full'
+          ? 'px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-orange-500 text-white shadow-sm'
+          : 'px-3 py-1.5 text-xs font-semibold rounded-lg transition text-slate-300 hover:text-white';
+
+        if (resetData) {
+          const base = createDefaultPlayers(mode);
+          state.steps = [{
+            note: mode === 'half' ? '하프코트 기본 5-Out 대형입니다. 선수를 드래그하거나 전술선을 그려보세요.' : '풀코트 기본 대형입니다. 속공 및 프레스 전술을 구성해보세요.',
+            offense: base.offense,
+            defense: base.defense,
+            ball: base.ball,
+            lines: []
+          }];
+          state.currentStep = 0;
+          playTitleInput.value = mode === 'half' ? '새 하프코트 작전' : '새 풀코트 작전';
+        }
+        renderStepsUI();
+        resizeCanvas();
+      }
+
+      // Load a preset
+      function loadPreset(key) {
+        const preset = PRESETS[key];
+        if (!preset) return;
+        stopAnimation();
+        state.mode = preset.mode;
+        state.steps = clone(preset.steps);
+        state.currentStep = 0;
+        playTitleInput.value = preset.title;
+        setCourtMode(preset.mode, false);
+        showToast(`'${preset.title}' 전술을 불러왔습니다.`);
+      }
+
+      // LocalStorage Playbook
+      function getSavedPlays() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function setSavedPlays(list) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      function renderPlaybookModal() {
+        const plays = getSavedPlays();
+        savedPlaysList.innerHTML = '';
+
+        if (plays.length === 0) {
+          savedPlaysList.innerHTML = `
+            <div class="text-center py-8 text-slate-400">
+              <p class="text-sm font-semibold text-slate-300 mb-1">저장된 작전이 아직 없습니다</p>
+              <p class="text-xs">상단의 [저장] 버튼을 눌러 현재 작전을 보관해보세요.</p>
+            </div>
+          `;
+          return;
+        }
+
+        plays.forEach((play) => {
+          const item = document.createElement('div');
+          item.className = 'bg-slate-800/80 border border-slate-700 rounded-xl p-3 flex items-center justify-between gap-3';
+          item.innerHTML = `
+            <div class="min-w-0">
+              <div class="text-sm font-bold text-white truncate">${escapeHtml(play.title)}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${play.mode === 'half' ? '하프코트' : '풀코트'} · ${play.steps.length}스텝 · ${play.savedAt}</div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button data-load-id="${play.id}" class="px-2.5 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition">불러오기</button>
+              <button data-del-id="${play.id}" class="p-1.5 rounded-lg bg-slate-700 hover:bg-red-500/30 text-slate-300 hover:text-red-300 transition" title="삭제">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          `;
+          savedPlaysList.appendChild(item);
+        });
+        if (window.lucide) lucide.createIcons();
+
+        savedPlaysList.querySelectorAll('[data-load-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-load-id');
+            const found = getSavedPlays().find(p => p.id === id);
+            if (found) {
+              stopAnimation();
+              state.mode = found.mode;
+              state.steps = clone(found.steps);
+              state.currentStep = 0;
+              playTitleInput.value = found.title;
+              setCourtMode(found.mode, false);
+              playbookModal.classList.add('hidden');
+              showToast(`'${found.title}' 작전을 불러왔습니다.`);
+            }
+          });
+        });
+
+        savedPlaysList.querySelectorAll('[data-del-id]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-del-id');
+            const filtered = getSavedPlays().filter(p => p.id !== id);
+            setSavedPlays(filtered);
+            renderPlaybookModal();
+            showToast('작전을 삭제했습니다.');
+          });
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, s => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[s]));
+      }
+
+      // Bind UI Events
+      btnHalfCourt.addEventListener('click', () => setCourtMode('half', true));
+      btnFullCourt.addEventListener('click', () => setCourtMode('full', true));
+
+      document.querySelectorAll('[data-tool]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.tool = btn.getAttribute('data-tool');
+          document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeToolLabel.textContent = TOOL_LABELS[state.tool] || '';
+          canvas.style.cursor = state.tool === 'select' ? 'grab' : 'crosshair';
+        });
+      });
+
+      document.querySelectorAll('[data-color]').forEach(dot => {
+        dot.addEventListener('click', () => {
+          state.color = dot.getAttribute('data-color');
+          document.querySelectorAll('[data-color]').forEach(d => {
+            d.classList.remove('ring-2', 'ring-orange-400', 'ring-offset-2', 'ring-offset-slate-900');
+            d.classList.add('opacity-80');
+          });
+          dot.classList.add('ring-2', 'ring-orange-400', 'ring-offset-2', 'ring-offset-slate-900');
+          dot.classList.remove('opacity-80');
+        });
+      });
+
+      document.getElementById('btnUndo').addEventListener('click', () => {
+        const lines = state.steps[state.currentStep].lines;
+        if (lines.length > 0) {
+          lines.pop();
+          renderStepsUI();
+          render();
+        } else {
+          showToast('되돌릴 전술선이 없습니다.');
+        }
+      });
+
+      document.getElementById('btnClearLines').addEventListener('click', () => {
+        state.steps[state.currentStep].lines = [];
+        renderStepsUI();
+        render();
+        showToast('현재 스텝의 전술선을 모두 지웠습니다.');
+      });
+
+      toggleDefense.addEventListener('change', (e) => {
+        state.showDefense = e.target.checked;
+        render();
+      });
+
+      togglePosLabel.addEventListener('change', (e) => {
+        state.showPosLabel = e.target.checked;
+        render();
+      });
+
+      document.getElementById('btnResetPositions').addEventListener('click', () => {
+        if (state.isPlaying) stopAnimation();
+        const base = createDefaultPlayers(state.mode);
+        const cur = state.steps[state.currentStep];
+        cur.offense = base.offense;
+        cur.defense = base.defense;
+        cur.ball = base.ball;
+        render();
+        showToast('선수 위치를 기본 대형으로 초기화했습니다.');
+      });
+
+      document.querySelectorAll('[data-preset]').forEach(btn => {
+        btn.addEventListener('click', () => loadPreset(btn.getAttribute('data-preset')));
+      });
+
+      // Timeline controls
+      btnPlayPause.addEventListener('click', () => {
+        if (state.isPlaying) stopAnimation();
+        else startAnimation();
+      });
+
+      document.getElementById('btnPrevStep').addEventListener('click', () => {
+        if (state.isPlaying) stopAnimation();
+        if (state.currentStep > 0) {
+          state.currentStep--;
+          renderStepsUI();
+          render();
+        }
+      });
+
+      document.getElementById('btnNextStep').addEventListener('click', () => {
+        if (state.isPlaying) stopAnimation();
+        if (state.currentStep < state.steps.length - 1) {
+          state.currentStep++;
+          renderStepsUI();
+          render();
+        }
+      });
+
+      speedSelect.addEventListener('change', (e) => {
+        state.speed = parseFloat(e.target.value) || 1;
+      });
+
+      btnLoopToggle.addEventListener('click', () => {
+        state.loop = !state.loop;
+        btnLoopToggle.className = state.loop
+          ? 'p-1.5 rounded-lg bg-orange-500/20 border border-orange-500/50 text-orange-300 transition'
+          : 'p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 transition';
+        btnLoopToggle.title = state.loop ? '반복 재생 켜짐' : '반복 재생 꺼짐';
+      });
+
+      document.getElementById('btnAddStep').addEventListener('click', () => {
+        if (state.isPlaying) stopAnimation();
+        const cur = state.steps[state.currentStep];
+        const next = {
+          note: '',
+          offense: clone(cur.offense),
+          defense: clone(cur.defense),
+          ball: clone(cur.ball),
+          lines: []
+        };
+        state.steps.splice(state.currentStep + 1, 0, next);
+        state.currentStep++;
+        renderStepsUI();
+        render();
+        showToast(`Step ${state.currentStep + 1}이 추가되었습니다. 선수를 다음 위치로 이동해보세요.`);
+      });
+
+      document.getElementById('btnDeleteStep').addEventListener('click', () => {
+        if (state.isPlaying) stopAnimation();
+        if (state.steps.length <= 1) {
+          showToast('최소 1개의 스텝은 유지되어야 합니다.');
+          return;
+        }
+        state.steps.splice(state.currentStep, 1);
+        state.currentStep = Math.max(0, state.currentStep - 1);
+        renderStepsUI();
+        render();
+        showToast('현재 스텝을 삭제했습니다.');
+      });
+
+      stepNoteInput.addEventListener('input', (e) => {
+        if (state.steps[state.currentStep]) {
+          state.steps[state.currentStep].note = e.target.value;
+        }
+      });
+
+      // Save & Playbook Modal
+      document.getElementById('btnSavePlay').addEventListener('click', () => {
+        const title = (playTitleInput.value || '').trim() || '이름 없는 작전';
+        const plays = getSavedPlays();
+        const now = new Date();
+        const savedAt = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const newEntry = {
+          id: 'play_' + Date.now(),
+          title,
+          mode: state.mode,
+          steps: clone(state.steps),
+          savedAt
+        };
+        plays.unshift(newEntry);
+        if (setSavedPlays(plays)) {
+          showToast(`'${title}' 작전이 작전북에 저장되었습니다.`);
+        } else {
+          showToast('저장 공간에 접근할 수 없습니다.');
+        }
+      });
+
+      document.getElementById('btnOpenPlaybook').addEventListener('click', () => {
+        renderPlaybookModal();
+        playbookModal.classList.remove('hidden');
+      });
+
+      document.getElementById('btnClosePlaybook').addEventListener('click', () => playbookModal.classList.add('hidden'));
+      document.getElementById('btnClosePlaybookFooter').addEventListener('click', () => playbookModal.classList.add('hidden'));
+      playbookModal.addEventListener('click', (e) => {
+        if (e.target === playbookModal) playbookModal.classList.add('hidden');
+      });
+
+      // Export PNG
+      document.getElementById('btnExportPng').addEventListener('click', () => {
+        try {
+          const link = document.createElement('a');
+          const safeName = (playTitleInput.value || 'basketball_play').replace(/[^\w가-힣-]+/g, '_');
+          link.download = `${safeName}_step${state.currentStep + 1}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          showToast('현재 전술판 이미지를 PNG로 저장했습니다.');
+        } catch (err) {
+          showToast('이미지 내보내기에 실패했습니다.');
+        }
+      });
+
+      // Export Video (Canvas captureStream + MediaRecorder)
+      function pickSupportedVideoMime() {
+        if (typeof MediaRecorder === 'undefined') return '';
+        const candidates = [
+          'video/mp4;codecs=avc1.42E01E',
+          'video/mp4',
+          'video/webm;codecs=vp9',
+          'video/webm;codecs=vp8',
+          'video/webm'
+        ];
+        for (const mime of candidates) {
+          if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mime)) {
+            return mime;
+          }
+        }
+        return '';
+      }
+
+      function setRecordingUI(active) {
+        state.isRecording = active;
+        recordingBadge.classList.toggle('hidden', !active);
+        exportVideoLabel.textContent = active ? '녹화 중지' : '영상 저장';
+        btnExportVideo.className = active
+          ? 'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-700 hover:bg-rose-800 border border-rose-400 text-xs font-semibold text-white transition shadow-sm animate-pulse'
+          : 'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 border border-rose-500/70 text-xs font-semibold text-white transition shadow-sm';
+      }
+
+      function cancelVideoRecording() {
+        if (state.animFrameId) {
+          cancelAnimationFrame(state.animFrameId);
+          state.animFrameId = null;
+        }
+        state.isPlaying = false;
+        if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+          state.mediaRecorder.onstop = null;
+          state.mediaRecorder.stop();
+        }
+        state.mediaRecorder = null;
+        setRecordingUI(false);
+        updatePlaybackUI();
+        render();
+        showToast('동영상 녹화를 취소했습니다.');
+      }
+
+      function startVideoExport() {
+        if (state.isRecording) {
+          cancelVideoRecording();
+          return;
+        }
+        if (state.steps.length < 2) {
+          showToast('동영상으로 저장하려면 스텝이 2개 이상 필요합니다.');
+          return;
+        }
+        if (typeof canvas.captureStream !== 'function' || typeof MediaRecorder === 'undefined') {
+          showToast('현재 브라우저에서는 동영상 녹화 기능을 지원하지 않습니다.');
+          return;
+        }
+
+        stopAnimation();
+        const mimeType = pickSupportedVideoMime();
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const safeName = (playTitleInput.value || 'basketball_play').trim().replace(/[^\w가-힣-]+/g, '_') || 'basketball_play';
+        const filename = `${safeName}.${ext}`;
+
+        let stream;
+        let recorder;
+        try {
+          stream = canvas.captureStream(30);
+          const options = { videoBitsPerSecond: 4500000 };
+          if (mimeType) options.mimeType = mimeType;
+          recorder = new MediaRecorder(stream, options);
+        } catch (err) {
+          showToast('동영상 녹화를 시작할 수 없습니다.');
+          return;
+        }
+
+        state.recordedChunks = [];
+        state.mediaRecorder = recorder;
+        setRecordingUI(true);
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            state.recordedChunks.push(e.data);
+          }
+        };
+
+        recorder.onstop = () => {
+          setRecordingUI(false);
+          state.isPlaying = false;
+          updatePlaybackUI();
+          render();
+
+          const blob = new Blob(state.recordedChunks, { type: mimeType || 'video/webm' });
+          if (state.recordedUrl) {
+            URL.revokeObjectURL(state.recordedUrl);
+          }
+          state.recordedUrl = URL.createObjectURL(blob);
+
+          // Prepare preview modal & download link
+          videoPreview.src = state.recordedUrl;
+          btnDownloadVideoLink.href = state.recordedUrl;
+          btnDownloadVideoLink.download = filename;
+          videoFormatBadge.textContent = ext.toUpperCase();
+          const sizeKb = Math.max(1, Math.round(blob.size / 1024));
+          videoFileInfo.textContent = `${filename} (${sizeKb >= 1024 ? (sizeKb / 1024).toFixed(1) + ' MB' : sizeKb + ' KB'})`;
+          videoModal.classList.remove('hidden');
+
+          // Also trigger automatic download
+          try {
+            const autoLink = document.createElement('a');
+            autoLink.href = state.recordedUrl;
+            autoLink.download = filename;
+            autoLink.click();
+          } catch (err) {
+            // User can still use modal download button
+          }
+          showToast(`동영상(${ext.toUpperCase()}) 생성이 완료되었습니다.`);
+        };
+
+        // Run a clean single pass: hold start -> animate steps -> hold end -> stop recorder
+        const startHoldMs = 550;
+        const endHoldMs = 850;
+        const stepDurMs = 1450 / state.speed;
+        const totalTransitions = state.steps.length - 1;
+        const totalMs = startHoldMs + totalTransitions * stepDurMs + endHoldMs;
+
+        state.isPlaying = true;
+        state.animFromStep = 0;
+        state.currentStep = 0;
+        state.animProgress = 0;
+        renderStepsUI();
+        render();
+
+        recorder.start(100);
+        const recStart = performance.now();
+
+        function recTick(now) {
+          if (!state.isRecording) return;
+          const elapsed = now - recStart;
+          const pct = Math.min(100, Math.round((elapsed / totalMs) * 100));
+          recordingBadgeText.textContent = `동영상 녹화 중... ${pct}%`;
+
+          if (elapsed < startHoldMs) {
+            state.animFromStep = 0;
+            state.currentStep = 0;
+            state.animProgress = 0;
+          } else if (elapsed < startHoldMs + totalTransitions * stepDurMs) {
+            const animElapsed = elapsed - startHoldMs;
+            const segIdx = Math.min(totalTransitions - 1, Math.floor(animElapsed / stepDurMs));
+            const segProg = (animElapsed - segIdx * stepDurMs) / stepDurMs;
+            if (state.currentStep !== segIdx) {
+              state.currentStep = segIdx;
+              renderStepsUI();
+            }
+            state.animFromStep = segIdx;
+            state.animProgress = Math.min(1, Math.max(0, segProg));
+          } else if (elapsed < totalMs) {
+            const lastIdx = state.steps.length - 1;
+            if (state.currentStep !== lastIdx) {
+              state.currentStep = lastIdx;
+              renderStepsUI();
+            }
+            state.animFromStep = lastIdx - 1;
+            state.animProgress = 1;
+          } else {
+            render();
+            if (recorder.state !== 'inactive') {
+              recorder.stop();
+            }
+            return;
+          }
+
+          render();
+          state.animFrameId = requestAnimationFrame(recTick);
+        }
+
+        state.animFrameId = requestAnimationFrame(recTick);
+      }
+
+      function closeVideoModal() {
+        videoModal.classList.add('hidden');
+        videoPreview.pause();
+      }
+
+      btnExportVideo.addEventListener('click', startVideoExport);
+      document.getElementById('btnCloseVideoModal').addEventListener('click', closeVideoModal);
+      document.getElementById('btnCloseVideoModalFooter').addEventListener('click', closeVideoModal);
+      videoModal.addEventListener('click', (e) => {
+        if (e.target === videoModal) closeVideoModal();
+      });
+
+      // Share URL & JSON Import/Export Logic
+      const shareModal = document.getElementById('shareModal');
+      const shareUrlInput = document.getElementById('shareUrlInput');
+      const jsonFileInput = document.getElementById('jsonFileInput');
+
+      function encodePlayToHash(playObj) {
+        const json = JSON.stringify(playObj);
+        const bytes = new TextEncoder().encode(json);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      }
+
+      function decodePlayFromHash(encoded) {
+        const b64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+        const binary = atob(b64 + pad);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const json = new TextDecoder().decode(bytes);
+        return JSON.parse(json);
+      }
+
+      function getCurrentPlayPayload() {
+        return {
+          v: 1,
+          creator: CREATOR_SIGN.name,
+          title: (playTitleInput.value || '공유된 작전').trim(),
+          mode: state.mode,
+          steps: clone(state.steps)
+        };
+      }
+
+      function isValidPlayPayload(obj) {
+        return (
+          obj &&
+          typeof obj === 'object' &&
+          (obj.mode === 'half' || obj.mode === 'full') &&
+          Array.isArray(obj.steps) &&
+          obj.steps.length > 0 &&
+          Array.isArray(obj.steps[0].offense) &&
+          Array.isArray(obj.steps[0].defense) &&
+          obj.steps[0].ball &&
+          typeof obj.steps[0].ball.x === 'number'
+        );
+      }
+
+      function applyPlayPayload(obj, sourceLabel) {
+        stopAnimation();
+        state.mode = obj.mode;
+        state.steps = clone(obj.steps).map(s => ({
+          note: typeof s.note === 'string' ? s.note : '',
+          offense: s.offense,
+          defense: s.defense,
+          ball: s.ball,
+          lines: Array.isArray(s.lines) ? s.lines : []
+        }));
+        state.currentStep = 0;
+        playTitleInput.value = (obj.title || '공유된 작전').trim();
+        setCourtMode(obj.mode, false);
+        showToast(`${sourceLabel} '${playTitleInput.value}' 작전을 불러왔습니다.`);
+      }
+
+      function buildShareUrl() {
+        const encoded = encodePlayToHash(getCurrentPlayPayload());
+        const base = window.location.href.split('#')[0];
+        return `${base}#play=${encoded}`;
+      }
+
+      function openShareModal() {
+        try {
+          shareUrlInput.value = buildShareUrl();
+        } catch (err) {
+          shareUrlInput.value = '';
+        }
+        shareModal.classList.remove('hidden');
+      }
+
+      function closeShareModal() {
+        shareModal.classList.add('hidden');
+      }
+
+      function copyTextFallback(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } catch (e) {
+          ok = false;
+        }
+        document.body.removeChild(ta);
+        return ok;
+      }
+
+      document.getElementById('btnOpenShare').addEventListener('click', openShareModal);
+      document.getElementById('btnCloseShareModal').addEventListener('click', closeShareModal);
+      document.getElementById('btnCloseShareModalFooter').addEventListener('click', closeShareModal);
+      shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) closeShareModal();
+      });
+
+      document.getElementById('btnCopyShareUrl').addEventListener('click', () => {
+        const url = shareUrlInput.value;
+        if (!url) {
+          showToast('공유 링크를 생성할 수 없습니다.');
+          return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => {
+            showToast('작전 공유 링크를 클립보드에 복사했습니다.');
+          }).catch(() => {
+            if (copyTextFallback(url)) showToast('작전 공유 링크를 클립보드에 복사했습니다.');
+            else showToast('링크 입력창에서 직접 복사해 주세요.');
+          });
+        } else if (copyTextFallback(url)) {
+          showToast('작전 공유 링크를 클립보드에 복사했습니다.');
+        } else {
+          showToast('링크 입력창에서 직접 복사해 주세요.');
+        }
+      });
+
+      document.getElementById('btnExportJson').addEventListener('click', () => {
+        try {
+          const payload = getCurrentPlayPayload();
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const safeName = (payload.title || 'basketball_play').replace(/[^\w가-힣-]+/g, '_') || 'basketball_play';
+          link.href = url;
+          link.download = `${safeName}.json`;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast(`'${safeName}.json' 작전 파일을 저장했습니다.`);
+        } catch (err) {
+          showToast('JSON 파일 내보내기에 실패했습니다.');
+        }
+      });
+
+      document.getElementById('btnImportJson').addEventListener('click', () => {
+        jsonFileInput.value = '';
+        jsonFileInput.click();
+      });
+
+      jsonFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(String(reader.result || ''));
+            if (!isValidPlayPayload(parsed)) {
+              showToast('올바른 코트마스터 작전 JSON 파일이 아닙니다.');
+              return;
+            }
+            applyPlayPayload(parsed, '파일에서');
+            closeShareModal();
+          } catch (err) {
+            showToast('JSON 파일을 읽는 중 오류가 발생했습니다.');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      function tryLoadFromUrlHash() {
+        try {
+          const hash = window.location.hash || '';
+          if (!hash.startsWith('#play=')) return false;
+          const encoded = hash.slice(6);
+          if (!encoded) return false;
+          const parsed = decodePlayFromHash(encoded);
+          if (!isValidPlayPayload(parsed)) return false;
+          applyPlayPayload(parsed, '공유 링크로');
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      window.addEventListener('hashchange', tryLoadFromUrlHash);
+
+      // Runtime Creator Attribution Protection ('우연.33')
+      function ensureCreatorAttribution() {
+        const expectedBadge = `제작 · ${CREATOR_SIGN.name}`;
+        let badge = document.getElementById('creatorHeaderBadge');
+        const headerTitleRow = document.querySelector('header h1')?.parentElement;
+        if (!badge && headerTitleRow) {
+          badge = document.createElement('span');
+          badge.id = 'creatorHeaderBadge';
+          headerTitleRow.appendChild(badge);
+        }
+        if (badge) {
+          if (badge.textContent !== expectedBadge) badge.textContent = expectedBadge;
+          badge.className = 'inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-amber-500/40';
+          badge.style.setProperty('display', 'inline-block', 'important');
+          badge.style.setProperty('visibility', 'visible', 'important');
+          badge.style.setProperty('opacity', '1', 'important');
+        }
+
+        let footer = document.getElementById('creatorFooter');
+        if (!footer) {
+          footer = document.createElement('footer');
+          footer.id = 'creatorFooter';
+          document.body.appendChild(footer);
+        }
+        footer.className = 'border-t border-slate-800/80 bg-slate-900/90 px-4 py-2 text-center text-xs text-slate-400 flex items-center justify-center gap-2';
+        footer.style.setProperty('display', 'flex', 'important');
+        footer.style.setProperty('visibility', 'visible', 'important');
+        footer.style.setProperty('opacity', '1', 'important');
+        const expectedFooterHtml = `<span id="creatorFooterText" class="font-semibold text-slate-300">코트마스터 농구 전술 작전판 · 제작자 <strong class="text-amber-300">${CREATOR_SIGN.name}</strong></span>`;
+        if (footer.innerHTML.trim() !== expectedFooterHtml) {
+          footer.innerHTML = expectedFooterHtml;
+        }
+      }
+
+      const creditObserver = new MutationObserver(() => {
+        ensureCreatorAttribution();
+      });
+      creditObserver.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+      setInterval(ensureCreatorAttribution, 3000);
+
+      // Window resize
+      window.addEventListener('resize', resizeCanvas);
+
+      // Initialize app: load shared play from URL hash if present, else default preset
+      if (window.lucide) lucide.createIcons();
+      ensureCreatorAttribution();
+      if (!tryLoadFromUrlHash()) {
+        loadPreset('pnr');
+      }
+    })();
+  </script>
+</body>
+</html>
