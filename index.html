@@ -156,7 +156,7 @@
           </button>
           <button data-tool="eraser" class="tool-btn flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 text-xs font-medium text-slate-200 hover:bg-slate-700 lg:col-span-2">
             <i data-lucide="eraser" class="w-4 h-4 shrink-0"></i>
-            <span class="text-[11px] lg:text-xs">선 지우개</span>
+            <span class="text-[11px] lg:text-xs">선·도구 지우개</span>
           </button>
         </div>
 
@@ -204,6 +204,37 @@
           <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-amber-400"></i>
           <span>기본 대형 초기화</span>
         </button>
+      </div>
+
+      <!-- Training Equipment (Cones, Ladder, Hurdle, Dummy, Extra Ball) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">훈련 도구 추가</span>
+          <button id="btnClearProps" class="text-[10px] font-semibold text-slate-400 hover:text-red-300 transition" title="현재 스텝의 훈련 도구 모두 지우기">도구 비우기</button>
+        </div>
+        <div class="grid grid-cols-3 lg:grid-cols-2 gap-1.5">
+          <button data-add-prop="cone" class="flex items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 hover:bg-slate-700 text-xs font-medium text-slate-200 transition">
+            <span class="inline-block w-3 h-3 rounded-sm bg-orange-500 border border-white/80 shrink-0" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></span>
+            <span class="text-[11px] lg:text-xs">꼬깔 콘</span>
+          </button>
+          <button data-add-prop="ladder" class="flex items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 hover:bg-slate-700 text-xs font-medium text-slate-200 transition">
+            <span class="inline-block w-3 h-3 rounded-sm bg-yellow-400 border border-slate-900 shrink-0"></span>
+            <span class="text-[11px] lg:text-xs whitespace-nowrap">사다리</span>
+          </button>
+          <button data-add-prop="hurdle" class="flex items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 hover:bg-slate-700 text-xs font-medium text-slate-200 transition">
+            <span class="inline-block w-3 h-2 rounded-sm bg-emerald-400 border border-white/80 shrink-0"></span>
+            <span class="text-[11px] lg:text-xs">미니 허들</span>
+          </button>
+          <button data-add-prop="dummy" class="flex items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 hover:bg-slate-700 text-xs font-medium text-slate-200 transition">
+            <span class="inline-block w-3 h-3 rounded-full bg-purple-500 border border-white/80 shrink-0"></span>
+            <span class="text-[11px] lg:text-xs">수비 더미</span>
+          </button>
+          <button data-add-prop="extraBall" class="flex items-center justify-center lg:justify-start gap-1.5 px-2.5 py-2 rounded-xl border border-slate-700/80 bg-slate-800/80 hover:bg-slate-700 text-xs font-medium text-slate-200 transition col-span-2 lg:col-span-2">
+            <span class="inline-block w-3 h-3 rounded-full bg-amber-500 border border-amber-900 shrink-0"></span>
+            <span class="text-[11px] lg:text-xs">보조 농구공 추가</span>
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-500 mt-2">클릭해 코트에 추가 후 드래그 · 지우개로 개별 삭제</p>
       </div>
 
       <!-- Quick Presets -->
@@ -438,7 +469,7 @@
         dribble: '드리블 (물결)',
         screen: '스크린 (T자)',
         pen: '자유선',
-        eraser: '선 지우개'
+        eraser: '선·도구 지우개'
       };
 
       const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
@@ -1236,6 +1267,115 @@
         ctx.restore();
       }
 
+      // Draw Training Equipment Props (Cone, Ladder, Hurdle, Dummy, Extra Ball)
+      function drawTrainingProp(prop) {
+        const s = state.mode === 'half' ? 1 : 0.88;
+        ctx.save();
+        ctx.translate(prop.x, prop.y);
+        ctx.scale(s, s);
+
+        if (prop.type === 'cone') {
+          // Base shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.beginPath();
+          ctx.ellipse(0, 12, 16, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Square orange base
+          ctx.fillStyle = '#c2410c';
+          ctx.beginPath();
+          ctx.roundRect(-14, 6, 28, 8, 3);
+          ctx.fill();
+          // Cone body
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.moveTo(0, -17);
+          ctx.lineTo(-11, 9);
+          ctx.lineTo(11, 9);
+          ctx.closePath();
+          ctx.fill();
+          ctx.lineWidth = 1.6;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+          // White reflective stripe
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.moveTo(-4.5, -5);
+          ctx.lineTo(4.5, -5);
+          ctx.lineTo(6.8, 1);
+          ctx.lineTo(-6.8, 1);
+          ctx.closePath();
+          ctx.fill();
+        } else if (prop.type === 'ladder') {
+          // Agility ladder (horizontal 5-rung)
+          const w = 68, h = 22;
+          ctx.fillStyle = 'rgba(0,0,0,0.25)';
+          ctx.fillRect(-w / 2 + 2, -h / 2 + 3, w, h);
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(-w / 2, -h / 2);
+          ctx.lineTo(w / 2, -h / 2);
+          ctx.moveTo(-w / 2, h / 2);
+          ctx.lineTo(w / 2, h / 2);
+          ctx.stroke();
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 3.2;
+          for (let i = 0; i <= 4; i++) {
+            const rx = -w / 2 + (w / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(rx, -h / 2);
+            ctx.lineTo(rx, h / 2);
+            ctx.stroke();
+          }
+        } else if (prop.type === 'hurdle') {
+          // Mini hurdle bar
+          ctx.fillStyle = 'rgba(0,0,0,0.28)';
+          ctx.fillRect(-20, 7, 40, 5);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 4.5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-18, 8);
+          ctx.lineTo(-18, -6);
+          ctx.lineTo(18, -6);
+          ctx.lineTo(18, 8);
+          ctx.stroke();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(-16, -6);
+          ctx.lineTo(16, -6);
+          ctx.stroke();
+        } else if (prop.type === 'dummy') {
+          // Defender mannequin / dummy pole
+          ctx.fillStyle = 'rgba(0,0,0,0.34)';
+          ctx.beginPath();
+          ctx.ellipse(0, 14, 15, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#7c3aed';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(-12, -5, 24, 19, 6);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(0, -12, 7.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '800 9px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('D', 0, 5);
+        } else if (prop.type === 'extraBall') {
+          ctx.restore();
+          drawBasketball({ x: prop.x, y: prop.y });
+          return;
+        }
+        ctx.restore();
+      }
+
       // Easing for smooth animation
       function easeInOutCubic(t) {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -1257,6 +1397,18 @@
           y: p.y + ((b[i] ? b[i].y : p.y) - p.y) * t
         }));
 
+        const fromProps = Array.isArray(from.props) ? from.props : [];
+        const toProps = Array.isArray(to.props) ? to.props : [];
+        const interpProps = fromProps.map((p, i) => {
+          const match = toProps.find(tp => tp.id === p.id) || toProps[i];
+          if (!match) return p;
+          return {
+            ...p,
+            x: p.x + (match.x - p.x) * t,
+            y: p.y + (match.y - p.y) * t
+          };
+        });
+
         return {
           offense: lerpList(from.offense, to.offense),
           defense: lerpList(from.defense, to.defense),
@@ -1264,7 +1416,8 @@
             x: from.ball.x + (to.ball.x - from.ball.x) * t,
             y: from.ball.y + (to.ball.y - from.ball.y) * t
           },
-          lines: from.lines
+          lines: from.lines,
+          props: interpProps
         };
       }
 
@@ -1282,6 +1435,11 @@
         // Draw active line being dragged
         if (state.drawingLine) {
           drawTacticalLine(state.drawingLine);
+        }
+
+        // Draw training equipment props (cones, ladder, hurdle, dummy, extra balls)
+        if (Array.isArray(frame.props)) {
+          frame.props.forEach(drawTrainingProp);
         }
 
         // Draw defense
@@ -1365,6 +1523,16 @@
             }
           }
         }
+        // Training props
+        if (Array.isArray(step.props)) {
+          for (let i = step.props.length - 1; i >= 0; i--) {
+            const pr = step.props[i];
+            const hitR = pr.type === 'ladder' ? 36 : 22;
+            if (Math.hypot(pt.x - pr.x, pt.y - pr.y) <= hitR) {
+              return { group: 'props', index: i, dx: pt.x - pr.x, dy: pt.y - pr.y };
+            }
+          }
+        }
         return null;
       }
 
@@ -1391,7 +1559,16 @@
           }
           return distToSegment(pt.x, pt.y, line.x1, line.y1, line.x2, line.y2) >= 16;
         });
-        if (step.lines.length !== before) {
+        let changed = step.lines.length !== before;
+        if (Array.isArray(step.props) && step.props.length > 0) {
+          const prevPropCount = step.props.length;
+          step.props = step.props.filter(pr => {
+            const hitR = pr.type === 'ladder' ? 34 : 22;
+            return Math.hypot(pt.x - pr.x, pt.y - pr.y) >= hitR;
+          });
+          if (step.props.length !== prevPropCount) changed = true;
+        }
+        if (changed) {
           render();
         }
       }
@@ -1584,7 +1761,8 @@
             offense: base.offense,
             defense: base.defense,
             ball: base.ball,
-            lines: []
+            lines: [],
+            props: []
           }];
           state.currentStep = 0;
           playTitleInput.value = mode === 'half' ? '새 하프코트 작전' : '새 풀코트 작전';
@@ -1757,6 +1935,52 @@
         showToast('선수 위치를 기본 대형으로 초기화했습니다.');
       });
 
+      // Training Equipment Add / Clear Handlers
+      const PROP_NAMES = {
+        cone: '꼬깔 콘',
+        ladder: '스텝 사다리',
+        hurdle: '미니 허들',
+        dummy: '수비 더미',
+        extraBall: '보조 농구공'
+      };
+
+      document.querySelectorAll('[data-add-prop]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (state.isRecording) return;
+          if (state.isPlaying) stopAnimation();
+          const type = btn.getAttribute('data-add-prop');
+          const step = state.steps[state.currentStep];
+          if (!Array.isArray(step.props)) step.props = [];
+          const dim = DIMS[state.mode];
+          const offset = (step.props.length % 6) * 26 - 65;
+          step.props.push({
+            id: 'prop_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            type,
+            x: Math.round(dim.w / 2 + offset),
+            y: Math.round(dim.h * 0.56 + ((step.props.length % 3) * 22 - 22))
+          });
+          // Switch to select/drag tool so coach can position immediately
+          state.tool = 'select';
+          document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.getAttribute('data-tool') === 'select'));
+          activeToolLabel.textContent = TOOL_LABELS.select;
+          canvas.style.cursor = 'grab';
+          render();
+          showToast(`${PROP_NAMES[type] || '훈련 도구'}를 코트에 추가했습니다. 원하는 위치로 드래그하세요.`);
+        });
+      });
+
+      document.getElementById('btnClearProps').addEventListener('click', () => {
+        if (state.isRecording) return;
+        const step = state.steps[state.currentStep];
+        if (!Array.isArray(step.props) || step.props.length === 0) {
+          showToast('삭제할 훈련 도구가 없습니다.');
+          return;
+        }
+        step.props = [];
+        render();
+        showToast('현재 스텝의 훈련 도구를 모두 비웠습니다.');
+      });
+
       document.querySelectorAll('[data-preset]').forEach(btn => {
         btn.addEventListener('click', () => loadPreset(btn.getAttribute('data-preset')));
       });
@@ -1809,7 +2033,8 @@
           offense: clone(cur.offense),
           defense: clone(cur.defense),
           ball: clone(cur.ball),
-          lines: []
+          lines: [],
+          props: clone(Array.isArray(cur.props) ? cur.props : [])
         };
         state.steps.splice(state.currentStep + 1, 0, next);
         state.currentStep++;
@@ -2133,7 +2358,8 @@
           offense: s.offense,
           defense: s.defense,
           ball: s.ball,
-          lines: Array.isArray(s.lines) ? s.lines : []
+          lines: Array.isArray(s.lines) ? s.lines : [],
+          props: Array.isArray(s.props) ? s.props : []
         }));
         state.currentStep = 0;
         playTitleInput.value = (obj.title || '공유된 작전').trim();
