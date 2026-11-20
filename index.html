@@ -1295,18 +1295,6 @@
         // Draw ball
         drawBasketball(frame.ball);
 
-        // Permanent creator watermark on court apron (included in live view, PNG & video)
-        (function drawCreatorWatermark() {
-          const dim = DIMS[state.mode];
-          ctx.save();
-          ctx.font = '700 11px Inter, sans-serif';
-          ctx.fillStyle = 'rgba(251, 191, 36, 0.85)';
-          ctx.textAlign = 'right';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(`제작 · ${CREATOR_SIGN.name}`, dim.w - 14, dim.h - 14);
-          ctx.restore();
-        })();
-
         // Burn play title & step memo into video frames while recording
         if (state.isRecording) {
           const dim = DIMS[state.mode];
@@ -1316,7 +1304,7 @@
 
           ctx.save();
           // Top apron title + step badge
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
           ctx.fillRect(0, 0, dim.w, 28);
           ctx.fillStyle = '#f8fafc';
           ctx.font = '700 13px Inter, sans-serif';
@@ -1328,17 +1316,29 @@
           ctx.textAlign = 'right';
           ctx.fillText(`Step ${stepIdx + 1} / ${state.steps.length}`, dim.w - 14, 14);
 
-          // Bottom apron memo caption
+          // Bottom apron memo caption (left-aligned to keep bottom-right watermark clear)
           if (note) {
             ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
             ctx.fillRect(0, dim.h - 28, dim.w, 28);
             ctx.fillStyle = '#e2e8f0';
-            ctx.font = '600 12px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(note.slice(0, 68), dim.w / 2, dim.h - 14);
+            ctx.font = '600 11.5px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(note.slice(0, 56), 14, dim.h - 14);
           }
           ctx.restore();
         }
+
+        // Permanent creator watermark on court apron (included in live view, PNG & video)
+        (function drawCreatorWatermark() {
+          const dim = DIMS[state.mode];
+          ctx.save();
+          ctx.font = '700 11px Inter, sans-serif';
+          ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`제작 · ${CREATOR_SIGN.name}`, dim.w - 14, dim.h - 14);
+          ctx.restore();
+        })();
       }
 
       // Hit testing for dragging
@@ -1398,6 +1398,7 @@
 
       // Pointer Events
       canvas.addEventListener('pointerdown', (e) => {
+        if (state.isRecording) return;
         if (state.isPlaying) stopAnimation();
         canvas.setPointerCapture(e.pointerId);
         const pt = getCourtPoint(e);
@@ -1762,6 +1763,10 @@
 
       // Timeline controls
       btnPlayPause.addEventListener('click', () => {
+        if (state.isRecording) {
+          showToast('동영상 녹화가 끝난 뒤 재생할 수 있습니다.');
+          return;
+        }
         if (state.isPlaying) stopAnimation();
         else startAnimation();
       });
@@ -2258,51 +2263,94 @@
 
       window.addEventListener('hashchange', tryLoadFromUrlHash);
 
-      // Runtime Creator Attribution Protection ('우연.33')
-      function ensureCreatorAttribution() {
-        const expectedBadge = `제작 · ${CREATOR_SIGN.name}`;
-        let badge = document.getElementById('creatorHeaderBadge');
-        const headerTitleRow = document.querySelector('header h1')?.parentElement;
-        if (!badge && headerTitleRow) {
-          badge = document.createElement('span');
-          badge.id = 'creatorHeaderBadge';
-          headerTitleRow.appendChild(badge);
-        }
-        if (badge) {
-          if (badge.textContent !== expectedBadge) badge.textContent = expectedBadge;
-          badge.className = 'inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-amber-500/40';
-          badge.style.setProperty('display', 'inline-block', 'important');
-          badge.style.setProperty('visibility', 'visible', 'important');
-          badge.style.setProperty('opacity', '1', 'important');
-        }
+      // Runtime Creator Attribution Protection ('우연.33') — Safe, non-recursive guard
+      let isRestoringCredit = false;
+      let creditCheckScheduled = false;
+      let creditObserver = null;
 
-        let footer = document.getElementById('creatorFooter');
-        if (!footer) {
-          footer = document.createElement('footer');
-          footer.id = 'creatorFooter';
-          document.body.appendChild(footer);
-        }
-        footer.className = 'border-t border-slate-800/80 bg-slate-900/90 px-4 py-2 text-center text-xs text-slate-400 flex items-center justify-center gap-2';
-        footer.style.setProperty('display', 'flex', 'important');
-        footer.style.setProperty('visibility', 'visible', 'important');
-        footer.style.setProperty('opacity', '1', 'important');
+      const BADGE_CLASS = 'inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-amber-500/40';
+      const FOOTER_CLASS = 'border-t border-slate-800/80 bg-slate-900/90 px-4 py-2 text-center text-xs text-slate-400 flex items-center justify-center gap-2';
+
+      function isHiddenByStyle(el) {
+        if (!el || !el.isConnected) return true;
+        const cs = window.getComputedStyle(el);
+        return cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.85;
+      }
+
+      function ensureCreatorAttribution() {
+        if (isRestoringCredit) return;
+        const expectedBadge = `제작 · ${CREATOR_SIGN.name}`;
         const expectedFooterHtml = `<span id="creatorFooterText" class="font-semibold text-slate-300">코트마스터 농구 전술 작전판 · 제작자 <strong class="text-amber-300">${CREATOR_SIGN.name}</strong></span>`;
-        if (footer.innerHTML.trim() !== expectedFooterHtml) {
-          footer.innerHTML = expectedFooterHtml;
+
+        const badge = document.getElementById('creatorHeaderBadge');
+        const footer = document.getElementById('creatorFooter');
+
+        const badgeNeedsFix = !badge || badge.textContent !== expectedBadge || badge.className !== BADGE_CLASS || isHiddenByStyle(badge);
+        const footerNeedsFix = !footer || footer.innerHTML.trim() !== expectedFooterHtml || footer.className !== FOOTER_CLASS || isHiddenByStyle(footer);
+
+        if (!badgeNeedsFix && !footerNeedsFix) return;
+
+        isRestoringCredit = true;
+        if (creditObserver) creditObserver.disconnect();
+        try {
+          if (badgeNeedsFix) {
+            const headerTitleRow = document.querySelector('header h1')?.parentElement;
+            let b = document.getElementById('creatorHeaderBadge');
+            if (!b && headerTitleRow) {
+              b = document.createElement('span');
+              b.id = 'creatorHeaderBadge';
+              headerTitleRow.appendChild(b);
+            }
+            if (b) {
+              b.textContent = expectedBadge;
+              b.className = BADGE_CLASS;
+              b.style.setProperty('display', 'inline-block', 'important');
+              b.style.setProperty('visibility', 'visible', 'important');
+              b.style.setProperty('opacity', '1', 'important');
+            }
+          }
+
+          if (footerNeedsFix) {
+            let f = document.getElementById('creatorFooter');
+            if (!f) {
+              f = document.createElement('footer');
+              f.id = 'creatorFooter';
+              document.body.appendChild(f);
+            }
+            f.className = FOOTER_CLASS;
+            f.innerHTML = expectedFooterHtml;
+            f.style.setProperty('display', 'flex', 'important');
+            f.style.setProperty('visibility', 'visible', 'important');
+            f.style.setProperty('opacity', '1', 'important');
+          }
+        } finally {
+          isRestoringCredit = false;
+          if (creditObserver) {
+            creditObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+          }
         }
       }
 
-      const creditObserver = new MutationObserver(() => {
-        ensureCreatorAttribution();
+      creditObserver = new MutationObserver(() => {
+        if (isRestoringCredit || creditCheckScheduled) return;
+        creditCheckScheduled = true;
+        requestAnimationFrame(() => {
+          creditCheckScheduled = false;
+          ensureCreatorAttribution();
+        });
       });
-      creditObserver.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
-      setInterval(ensureCreatorAttribution, 3000);
+      creditObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+      setInterval(ensureCreatorAttribution, 4000);
 
       // Window resize
       window.addEventListener('resize', resizeCanvas);
 
       // Initialize app: load shared play from URL hash if present, else default preset
-      if (window.lucide) lucide.createIcons();
+      try {
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      } catch (e) {}
       ensureCreatorAttribution();
       if (!tryLoadFromUrlHash()) {
         loadPreset('pnr');
